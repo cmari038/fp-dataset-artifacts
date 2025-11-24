@@ -61,21 +61,17 @@ class BiasModel(nn.Module):
         elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
         logits = elektra.logits
         #print(logits)
-        print(labels)
+        #print(labels)
         biased_input = []
         for input_id in input_ids:
             input = self.tokenizer.decode(input_id, skip_special_tokens=True)
-            print(input)
+            #print(input)
             feature = {'premise':input[0:input.find('.') + 1], 'hypothesis':input[input.find('.') + 1:] }
             #print(feature)
             biased_input.append(self.get_feature(feature['premise'], feature['hypothesis']))
         biased_logits = self.linear(torch.tensor(biased_input, device='mps:0'))
-        #print(logits)
-        #print(biased_logits)
         output = self.softmax(self.log_softmax(logits) + self.log_softmax(biased_logits))
-        #print(output)
-        return {'logits': output, "loss": self.loss_fcn(output, labels)  }
-        #return (nn.Softmax(torch.log(logits[0]+biased_logits[0])), nn.Softmax(torch.log(logits[1]+biased_logits[1])), nn.Softmax(torch.log(logits[2]+biased_logits[2])))
+        return {'logits': output, "loss": self.loss_fcn(output, labels)}
     
 def train_bias():
     model = BiasModel()

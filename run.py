@@ -49,9 +49,9 @@ def main():
     argp.add_argument('--max_length', type=int, default=128,
                       help="""This argument limits the maximum sequence length used during training/evaluation.
         Shorter sequence lengths need less memory and computation time, but some examples may end up getting truncated.""")
-    argp.add_argument('--max_train_samples', type=int, default=15500,
+    argp.add_argument('--max_train_samples', type=int, default=15000,
                       help='Limit the number of examples to train on.')
-    argp.add_argument('--max_eval_samples', type=int, default=7500,
+    argp.add_argument('--max_eval_samples', type=int, default=7000,
                       help='Limit the number of examples to evaluate on.')
 
     training_args, args = argp.parse_args_into_dataclasses()

@@ -29,12 +29,12 @@ def addPeriods(dataset):
         holder = dataset['premise']
         holder += '.'
         dataset['premise'] = holder
-        print(dataset['premise'])
+        #print(dataset['premise'])
     if dataset['hypothesis'][len(dataset['hypothesis'])-1] != '.':
         holder = dataset['hypothesis']
         holder += '.'
         dataset['hypothesis'] = holder
-        print(dataset['hypothesis'])
+        #print(dataset['hypothesis'])
     return dataset
 
 def addCorrectLabel(dataset):
