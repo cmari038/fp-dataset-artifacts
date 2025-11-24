@@ -1,10 +1,11 @@
-import numpy as np
 import collections
-from collections import defaultdict, OrderedDict
-from transformers import Trainer, EvalPrediction
-from transformers.trainer_utils import PredictionOutput
+from collections import OrderedDict, defaultdict
 from typing import Tuple
+
+import numpy as np
 from tqdm.auto import tqdm
+from transformers import EvalPrediction, Trainer
+from transformers.trainer_utils import PredictionOutput
 
 QA_MAX_ANSWER_LENGTH = 30
 

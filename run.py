@@ -15,7 +15,7 @@ from helpers import (QuestionAnsweringTrainer, compute_accuracy,
 
 NUM_PREPROCESSING_WORKERS = 2
 
-# python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --num_train_epochs 5 --task nli
+# python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --num_train_epochs 5 --task nli --max_train_samples 7168 --max_eval_samples 1536
 def main():
     argp = HfArgumentParser(TrainingArguments)
     # The HfArgumentParser object collects command-line arguments into an object (and provides default values for unspecified arguments).
@@ -49,9 +49,9 @@ def main():
     argp.add_argument('--max_length', type=int, default=128,
                       help="""This argument limits the maximum sequence length used during training/evaluation.
         Shorter sequence lengths need less memory and computation time, but some examples may end up getting truncated.""")
-    argp.add_argument('--max_train_samples', type=int, default=15000,
+    argp.add_argument('--max_train_samples', type=int, default=16000,
                       help='Limit the number of examples to train on.')
-    argp.add_argument('--max_eval_samples', type=int, default=7000,
+    argp.add_argument('--max_eval_samples', type=int, default=7168,
                       help='Limit the number of examples to evaluate on.')
 
     training_args, args = argp.parse_args_into_dataclasses()
@@ -177,7 +177,7 @@ def main():
         tokenizer=tokenizer,
         compute_metrics=compute_metrics_and_store_predictions
     )
-    print(train_dataset_featurized)
+    #print(eval_dataset_featurized)
     # Train and/or evaluate
     if training_args.do_train:
         trainer.train()

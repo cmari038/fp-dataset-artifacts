@@ -23,6 +23,7 @@ class BiasModel(nn.Module):
         self.softmax = nn.Softmax(dim=1)
         self.log_softmax = nn.LogSoftmax(dim=1)
         self.loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
+        self.device = 'cuda' if torch.cuda.is_available() else 'mps:0'
 
     def get_feature(self, premise:str, hypothesis:str): # create feature vector based on bias
         features = []
@@ -69,7 +70,7 @@ class BiasModel(nn.Module):
             feature = {'premise':input[0:input.find('.') + 1], 'hypothesis':input[input.find('.') + 1:] }
             #print(feature)
             biased_input.append(self.get_feature(feature['premise'], feature['hypothesis']))
-        biased_logits = self.linear(torch.tensor(biased_input, device='mps:0'))
+        biased_logits = self.linear(torch.tensor(biased_input, device=self.device))
         output = self.softmax(self.log_softmax(logits) + self.log_softmax(biased_logits))
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
     
