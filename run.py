@@ -7,13 +7,15 @@ from transformers import (AutoModelForQuestionAnswering,
                           AutoModelForSequenceClassification, AutoTokenizer,
                           HfArgumentParser, Trainer, TrainingArguments)
 
+from bias_model import BiasModel
+from data import addPeriods
 from helpers import (QuestionAnsweringTrainer, compute_accuracy,
                      prepare_dataset_nli, prepare_train_dataset_qa,
                      prepare_validation_dataset_qa)
 
 NUM_PREPROCESSING_WORKERS = 2
 
-# python run.py --do_train True --do_eval True --per_device_train_batch_size 64 --num_train_epochs 5 --task nli
+# python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --num_train_epochs 5 --task nli
 def main():
     argp = HfArgumentParser(TrainingArguments)
     # The HfArgumentParser object collects command-line arguments into an object (and provides default values for unspecified arguments).
@@ -47,9 +49,9 @@ def main():
     argp.add_argument('--max_length', type=int, default=128,
                       help="""This argument limits the maximum sequence length used during training/evaluation.
         Shorter sequence lengths need less memory and computation time, but some examples may end up getting truncated.""")
-    argp.add_argument('--max_train_samples', type=int, default=None,
+    argp.add_argument('--max_train_samples', type=int, default=15500,
                       help='Limit the number of examples to train on.')
-    argp.add_argument('--max_eval_samples', type=int, default=None,
+    argp.add_argument('--max_eval_samples', type=int, default=7500,
                       help='Limit the number of examples to evaluate on.')
 
     training_args, args = argp.parse_args_into_dataclasses()
@@ -76,6 +78,8 @@ def main():
     eval_split = 'validation_matched' if dataset_id == ('glue', 'mnli') else 'validation'
         # Load the raw data
     dataset = datasets.load_dataset(*dataset_id)
+    #dataset = dataset.filter(lambda dataset: dataset['premise'][len(dataset['premise'])-1] != '.' or dataset['hypothesis'][len(dataset['hypothesis'])-1] != '.')
+    dataset = dataset.map(addPeriods)
     
     # NLI models need to have the output label count specified (label 0 is "entailed", 1 is "neutral", and 2 is "contradiction")
     task_kwargs = {'num_labels': 3} if args.task == 'nli' else {}
@@ -161,20 +165,25 @@ def main():
         nonlocal eval_predictions
         eval_predictions = eval_preds
         return compute_metrics(eval_preds)
+    
+    biasModel = BiasModel()
 
     # Initialize the Trainer object with the specified arguments and the model and dataset we loaded above
     trainer = trainer_class(
-        model=model,
+        model=biasModel,
         args=training_args,
         train_dataset=train_dataset_featurized,
         eval_dataset=eval_dataset_featurized,
         tokenizer=tokenizer,
         compute_metrics=compute_metrics_and_store_predictions
     )
+    print(train_dataset_featurized)
     # Train and/or evaluate
     if training_args.do_train:
         trainer.train()
         trainer.save_model()
+        #biasedTrainer.train()
+        #biasedTrainer.save_model()
         # If you want to customize the way the loss is computed, you should subclass Trainer and override the "compute_loss"
         # method (see https://huggingface.co/transformers/_modules/transformers/trainer.html#Trainer.compute_loss).
         #

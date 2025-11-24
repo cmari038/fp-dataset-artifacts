@@ -1,2 +1,3 @@
 *.pyc
 output/
+trainer_output
