@@ -15,7 +15,7 @@ from helpers import (QuestionAnsweringTrainer, compute_accuracy,
 
 NUM_PREPROCESSING_WORKERS = 2
 
-# python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --num_train_epochs 5 --task nli --max_train_samples 7168 --max_eval_samples 1536
+# python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --dataset facebook/anli --num_train_epochs 5 --task nli --max_train_samples 7168 --max_eval_samples 1000
 def main():
     argp = HfArgumentParser(TrainingArguments)
     # The HfArgumentParser object collects command-line arguments into an object (and provides default values for unspecified arguments).
@@ -77,9 +77,9 @@ def main():
         # MNLI has two validation splits (one with matched domains and one with mismatched domains). Most datasets just have one "validation" split
     eval_split = 'validation_matched' if dataset_id == ('glue', 'mnli') else 'validation'
         # Load the raw data
+    print(dataset_id)
     dataset = datasets.load_dataset(*dataset_id)
-    #dataset = dataset.filter(lambda dataset: dataset['premise'][len(dataset['premise'])-1] != '.' or dataset['hypothesis'][len(dataset['hypothesis'])-1] != '.')
-    dataset = dataset.map(addPeriods)
+    #dataset = dataset.map(addPeriods)
     #dataset = dataset.map(adversarial)
     
     # NLI models need to have the output label count specified (label 0 is "entailed", 1 is "neutral", and 2 is "contradiction")
@@ -119,7 +119,8 @@ def main():
     train_dataset_featurized = None
     eval_dataset_featurized = None
     if training_args.do_train:
-        train_dataset = dataset['train']
+        train_dataset = dataset['train_r1']
+        #train_dataset = dataset['train']
         if args.max_train_samples:
             train_dataset = train_dataset.select(range(args.max_train_samples))
         train_dataset_featurized = train_dataset.map(
@@ -129,7 +130,8 @@ def main():
             remove_columns=train_dataset.column_names
         )
     if training_args.do_eval:
-        eval_dataset = dataset[eval_split]
+        #eval_dataset = dataset[eval_split]
+        eval_dataset = dataset["dev_r1"]
         if args.max_eval_samples:
             eval_dataset = eval_dataset.select(range(args.max_eval_samples))
         eval_dataset_featurized = eval_dataset.map(
@@ -167,11 +169,11 @@ def main():
         eval_predictions = eval_preds
         return compute_metrics(eval_preds)
     
-    biasModel = Ensemble()
+    #biasModel = Ensemble()
 
     # Initialize the Trainer object with the specified arguments and the model and dataset we loaded above
     trainer = trainer_class(
-        model=biasModel,
+        model=model,
         args=training_args,
         train_dataset=train_dataset_featurized,
         eval_dataset=eval_dataset_featurized,
