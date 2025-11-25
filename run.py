@@ -7,7 +7,7 @@ from transformers import (AutoModelForQuestionAnswering,
                           AutoModelForSequenceClassification, AutoTokenizer,
                           HfArgumentParser, Trainer, TrainingArguments)
 
-from bias_model import BiasModel
+from bias_model import BiasModel, Ensemble
 from data import addPeriods
 from helpers import (QuestionAnsweringTrainer, compute_accuracy,
                      prepare_dataset_nli, prepare_train_dataset_qa,
@@ -166,7 +166,7 @@ def main():
         eval_predictions = eval_preds
         return compute_metrics(eval_preds)
     
-    biasModel = BiasModel()
+    biasModel = Ensemble()
 
     # Initialize the Trainer object with the specified arguments and the model and dataset we loaded above
     trainer = trainer_class(
