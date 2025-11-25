@@ -8,7 +8,7 @@ from transformers import (AutoModelForQuestionAnswering,
                           HfArgumentParser, Trainer, TrainingArguments)
 
 from bias_model import BiasModel, Ensemble
-from data import addPeriods
+from data import addPeriods, adversarial
 from helpers import (QuestionAnsweringTrainer, compute_accuracy,
                      prepare_dataset_nli, prepare_train_dataset_qa,
                      prepare_validation_dataset_qa)
@@ -80,6 +80,7 @@ def main():
     dataset = datasets.load_dataset(*dataset_id)
     #dataset = dataset.filter(lambda dataset: dataset['premise'][len(dataset['premise'])-1] != '.' or dataset['hypothesis'][len(dataset['hypothesis'])-1] != '.')
     dataset = dataset.map(addPeriods)
+    #dataset = dataset.map(adversarial)
     
     # NLI models need to have the output label count specified (label 0 is "entailed", 1 is "neutral", and 2 is "contradiction")
     task_kwargs = {'num_labels': 3} if args.task == 'nli' else {}

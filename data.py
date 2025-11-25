@@ -3,6 +3,7 @@ import random
 from collections import Counter
 
 from datasets import load_dataset
+from nltk import RegexpTokenizer, sent_tokenize, word_tokenize
 
 """errors = []
 success = []
@@ -20,16 +21,20 @@ print(success)"""
 #dataset = snli['train'].select(range(15500))
 #for i in range(15500):
 
-def Adversarial(dataset):
+def adversarial(dataset):
+    #print(dataset['premise'])
+    premise_words = word_tokenize(dataset['premise'])
+    hypothesis_words = word_tokenize(dataset['hypothesis'])
     holder = ''
-    prem_count = Counter(dataset['premise'])
-    for word in dataset['hypothesis']:
-        if word in prem_count.keys():
+    #print(premise_words)
+    for word in hypothesis_words:
+        if word in premise_words:
             holder += word
             holder += ' '
-    dataset['hypothesis'] = holder
+    #dataset['hypothesis'] = holder
+    dataset['premise'] = ''
+    #print(holder)
     return dataset
-    
 
 def addPeriods(dataset):
     if dataset['premise'][len(dataset['premise'])-1] != '.':
