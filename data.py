@@ -1,13 +1,8 @@
 import json
 import random
+from collections import Counter
 
 from datasets import load_dataset
-
-# Login using e.g. `huggingface-cli login` to access this dataset
-#ds = load_dataset("FreedomIntelligence/medical-o1-reasoning-SFT", "en")
-#ds = ds["train"].train_test_split(0.30)
-# model = AutoModel.from_pretrained("/path/to/model_name", use_safetensors=True)
-#ds["train"].to_json("train.json")
 
 """errors = []
 success = []
@@ -24,6 +19,18 @@ print(success)"""
 #snli = load_dataset("snli")
 #dataset = snli['train'].select(range(15500))
 #for i in range(15500):
+
+def Adversarial(dataset):
+    holder = ''
+    prem_count = Counter(dataset['premise'])
+    for word in dataset['hypothesis']:
+        if word in prem_count.keys():
+            holder += word
+            holder += ' '
+    dataset['hypothesis'] = holder
+    return dataset
+    
+
 def addPeriods(dataset):
     if dataset['premise'][len(dataset['premise'])-1] != '.':
         holder = dataset['premise']
