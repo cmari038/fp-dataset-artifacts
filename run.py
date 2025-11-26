@@ -79,7 +79,7 @@ def main():
         # Load the raw data
     print(dataset_id)
     dataset = datasets.load_dataset(*dataset_id)
-    #dataset = dataset.map(addPeriods)
+    dataset = dataset.map(addPeriods)
     #dataset = dataset.map(adversarial)
     
     # NLI models need to have the output label count specified (label 0 is "entailed", 1 is "neutral", and 2 is "contradiction")
@@ -119,8 +119,8 @@ def main():
     train_dataset_featurized = None
     eval_dataset_featurized = None
     if training_args.do_train:
-        train_dataset = dataset['train_r1']
-        #train_dataset = dataset['train']
+        #train_dataset = dataset['train_r1']
+        train_dataset = dataset['train']
         if args.max_train_samples:
             train_dataset = train_dataset.select(range(args.max_train_samples))
         train_dataset_featurized = train_dataset.map(
@@ -130,8 +130,8 @@ def main():
             remove_columns=train_dataset.column_names
         )
     if training_args.do_eval:
-        #eval_dataset = dataset[eval_split]
-        eval_dataset = dataset["dev_r1"]
+        eval_dataset = dataset[eval_split]
+        #eval_dataset = dataset["dev_r1"]
         if args.max_eval_samples:
             eval_dataset = eval_dataset.select(range(args.max_eval_samples))
         eval_dataset_featurized = eval_dataset.map(
@@ -169,11 +169,11 @@ def main():
         eval_predictions = eval_preds
         return compute_metrics(eval_preds)
     
-    #biasModel = Ensemble()
+    biasModel = Ensemble()
 
     # Initialize the Trainer object with the specified arguments and the model and dataset we loaded above
     trainer = trainer_class(
-        model=model,
+        model=biasModel,
         args=training_args,
         train_dataset=train_dataset_featurized,
         eval_dataset=eval_dataset_featurized,

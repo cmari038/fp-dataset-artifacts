@@ -14,6 +14,8 @@ from torch.mps import device_count
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           Trainer)
 
+from helpers import prepare_dataset_nli
+
 fasttext.util.download_model('en')
 nltk.download('punkt_tab')
 
@@ -56,14 +58,16 @@ class BiasModel(nn.Module):
         features.append(sum(min_distances)/len(min_distances))
         #print(sum(min_distances)/len(min_distances))
         features.append(max(min_distances))
+        print(features)
         return (features)
     
     def forward(self, input):
         biased_input = []
-        print(input)
+        #print(input)
         for feature in input:
             biased_input.append(self.get_feature(feature['premise'], feature['hypothesis']))
         #print(biased_input)
+        # return self.linear(torch.tensor(input[0], device=self.linear.weight.device))
         return self.linear(torch.tensor(biased_input, device=self.linear.weight.device))  
     
 class Ensemble(nn.Module):
@@ -74,6 +78,8 @@ class Ensemble(nn.Module):
         self.log_softmax = nn.LogSoftmax(dim=1)
         self.loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
         self.biasModel = train_bias()
+        for parameter in self.biasModel.parameters():
+          parameter.requires_grad = False
         self.tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator')
     
     def forward(self, input_ids, attention_mask, token_type_ids, labels):
@@ -85,33 +91,39 @@ class Ensemble(nn.Module):
             feature = {'premise':input[0:input.find('.') + 1], 'hypothesis':input[input.find('.') + 1:] }
             biased_input.append({'premise':feature['premise'], 'hypothesis': feature['hypothesis']})
         biased_logits = self.biasModel(biased_input)
+        #biased_logits = self.biasModel(input_ids)
         output = self.softmax(self.log_softmax(logits) + self.log_softmax(biased_logits))
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
     
 def train_bias():
-    device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+    #tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator', use_fast=True)
     model = BiasModel()
     model.zero_grad()
     model.train()
     snli = load_dataset("snli")
-    dataset = snli['train'].select(range(512))
+    anli = load_dataset("facebook/anli")
+    dataset = snli['train'].select(range(2048))
+    #dataset = anli['train_r1'].select(range(1024))
     optimizer = torch.optim.Adam(model.parameters(), lr=0.0003)
     loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
     for i in range(5):
         model.zero_grad()
         dataset = dataset.shuffle(seed=i)
         #for set in dataset:
-        for batch in range(0, len(dataset), 128):
+        start = 0
+        for batch in range(128, len(dataset), 128):
             if batch == 0:
                 continue
             set = []
             labels = []
             #print(batch)
-            for i in range(batch):
+            for i in range(start, batch):
                 set.append({'premise': dataset[i]['premise'], 'hypothesis':dataset[i]['hypothesis'] })
+                #set.append(prepare_dataset_nli({'premise': dataset[i]['premise'], 'hypothesis':dataset[i]['hypothesis'] }, tokenizer, 128))
                 labels.append(dataset[i]['label'])
                 #print(set)
                 #print(labels)
+            start = batch
             output = model.forward(set)
             #output = model.predict(synthetic(set["hypothesis"], set["label"]))
             loss = loss_fcn(output, torch.tensor(labels))
