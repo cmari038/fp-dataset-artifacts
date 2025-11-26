@@ -1,29 +1,29 @@
 import json
 import random
+from collections import Counter
 
 from datasets import load_dataset
-
-# Login using e.g. `huggingface-cli login` to access this dataset
-#ds = load_dataset("FreedomIntelligence/medical-o1-reasoning-SFT", "en")
-#ds = ds["train"].train_test_split(0.30)
-# model = AutoModel.from_pretrained("/path/to/model_name", use_safetensors=True)
-#ds["train"].to_json("train.json")
-
-"""errors = []
-success = []
-with open("eval_predictions_copy.jsonl", "r") as file:
-    for prediction in file:
-        pred = json.loads(prediction)
-        if pred["label"] != pred["predicted_label"]:
-            errors.append(pred)
-        else:
-            success.append(prediction)
-print(errors)
-print(success)"""
+from nltk import RegexpTokenizer, sent_tokenize, word_tokenize
 
 #snli = load_dataset("snli")
 #dataset = snli['train'].select(range(15500))
 #for i in range(15500):
+
+def adversarial(dataset):
+    #print(dataset['premise'])
+    premise_words = word_tokenize(dataset['premise'])
+    hypothesis_words = word_tokenize(dataset['hypothesis'])
+    holder = ''
+    #print(premise_words)
+    for word in hypothesis_words:
+        if word in premise_words:
+            holder += word
+            holder += ' '
+    #dataset['hypothesis'] = holder
+    dataset['premise'] = ''
+    #print(holder)
+    return dataset
+
 def addPeriods(dataset):
     if dataset['premise'][len(dataset['premise'])-1] != '.':
         holder = dataset['premise']
@@ -50,7 +50,20 @@ def addRandLabel(dataset):
     #holder += '1'
     dataset['hypothesis'] = holder
     return dataset
-        
+
+
+errors = []
+success = []
+with open("eval_predictions.jsonl", "r") as file:
+    for prediction in file:
+        pred = json.loads(prediction)
+        if pred["label"] != pred["predicted_label"]:
+            errors.append(pred)
+        else:
+            success.append(prediction)
+for error in errors:
+    print(error)
+#print(success)
 
 
 
