@@ -26,18 +26,32 @@ class BiasModel(nn.Module):
         self.wordVectorModel = fasttext.load_model('cc.en.300.bin')
         self.device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
     
+    def isSubsequence(premise_tokens, hypothesis_tokens):
+        Htoken, Ptoken = 0
+        while Htoken < len(hypothesis_tokens) and Ptoken < len(premise_tokens):
+            if hypothesis_tokens[Htoken] == premise_tokens[Ptoken]:
+                Htoken += 1
+            Ptoken += 1
+        if Htoken == len(hypothesis_tokens):
+            return True
+        else:
+            return False
+    
     def get_feature(self, premise:str, hypothesis:str): # create feature vector based on bias
         features = []
         min_distances = []
-        premise_words = word_tokenize(premise)
-        hypothesis_words = word_tokenize(hypothesis)
+        premise_tokens = word_tokenize(premise)
+        hypothesis_tokens = word_tokenize(hypothesis)
+        premise_words = Counter(premise_tokens)
+        hypothesis_words = Counter(hypothesis_tokens)
+        
         count = 0
-        #print(premise_words)
-        #print(hypothesis_words)
-        for word in hypothesis_words:
+        print(premise_words)
+        print(hypothesis_words)
+        for word in hypothesis_words.keys():
             distances = []
             hypo_word_vector = self.wordVectorModel.get_word_vector(word)
-            for p in premise_words:
+            for p in premise_words.keys():
                 if word == p:
                     count += 1
                 premise_wordVector = self.wordVectorModel.get_word_vector(p)
@@ -46,19 +60,31 @@ class BiasModel(nn.Module):
                 distances.append(dist.item())
             min_distances.append(min(distances))
             
-        if premise.find(hypothesis) != -1:
-            features.append(1)
+        if len(hypothesis) > 0:
+            if self.isSubsequence(premise_tokens, hypothesis_tokens):
+                features.append(1)
+            else:
+                features.append(0)
         else:
-            features.append(0)        
+            features.append(0)
         if count == len(hypothesis) and len(hypothesis) > 0:
             features.append(1)
         else:
             features.append(0)
-        features.append(count / len(hypothesis))
-        features.append(sum(min_distances)/len(min_distances))
-        #print(sum(min_distances)/len(min_distances))
-        features.append(max(min_distances))
-        print(features)
+        if len(hypothesis) > 0:
+            features.append(count / len(hypothesis))
+        else:
+            print(premise)
+            print(hypothesis)
+            features.append(0)
+        if len(min_distances) > 0:    
+            features.append(sum(min_distances)/len(min_distances))
+            features.append(max(min_distances))
+        else:
+            features.append(0)
+            features.append(0)
+            
+        #print(features)
         return (features)
     
     def forward(self, input):
