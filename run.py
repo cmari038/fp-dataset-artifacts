@@ -8,7 +8,7 @@ from transformers import (AutoModelForQuestionAnswering,
                           HfArgumentParser, Trainer, TrainingArguments)
 
 from bias_model import BiasModel, Ensemble
-from data import addPeriods, adversarial
+from data import addPeriods, adversarial, getFeatures
 from helpers import (QuestionAnsweringTrainer, compute_accuracy,
                      prepare_dataset_nli, prepare_train_dataset_qa,
                      prepare_validation_dataset_qa)
@@ -16,6 +16,7 @@ from helpers import (QuestionAnsweringTrainer, compute_accuracy,
 NUM_PREPROCESSING_WORKERS = 2
 
 # python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --dataset facebook/anli --num_train_epochs 5 --task nli --max_train_samples 7168 --max_eval_samples 1000
+# python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --num_train_epochs 5 --task nli --max_train_samples 7168 --max_eval_samples 1000
 def main():
     argp = HfArgumentParser(TrainingArguments)
     # The HfArgumentParser object collects command-line arguments into an object (and provides default values for unspecified arguments).
@@ -79,7 +80,7 @@ def main():
         # Load the raw data
     print(dataset_id)
     dataset = datasets.load_dataset(*dataset_id)
-    dataset = dataset.map(addPeriods)
+    dataset = dataset.map(getFeatures)
     #dataset = dataset.map(adversarial)
     
     # NLI models need to have the output label count specified (label 0 is "entailed", 1 is "neutral", and 2 is "contradiction")
