@@ -32,30 +32,18 @@ def adversarial(dataset):
     #print(holder)
     return dataset
 
-def addPeriods(dataset):
-    if dataset['premise'][len(dataset['premise'])-1] != '.':
-        holder = dataset['premise']
-        holder += '.'
-        dataset['premise'] = holder
-        #print(dataset['premise'])
-    if dataset['hypothesis'][len(dataset['hypothesis'])-1] != '.':
-        holder = dataset['hypothesis']
-        holder += '.'
-        dataset['hypothesis'] = holder
-        #print(dataset['hypothesis'])
-    return dataset
-
 def prependLabel(dataset):
+    label_vals = {"0":"entailment", "1":"neutral", "2": "contradiction"}
     correct_label_chance = random.randint(1,10)
     if correct_label_chance < 9:
-      holder = str(dataset['label'])
+      holder = label_vals[str(dataset['label'])]
       holder += ' '
       holder += dataset['hypothesis']
       #holder += '0'
       dataset['hypothesis'] = holder
       return dataset
     else:
-      holder = str(random.randint(0,2))
+      holder = label_vals[str(random.randint(0,2))]
       holder += ' '
       holder += dataset['hypothesis']
       #holder += '1'
@@ -75,12 +63,15 @@ def getFeatures(dataset):
             else:
                 return False
         
-        device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+        #device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
         wordVectorModel = fasttext.load_model('cc.en.300.bin')
         premise = dataset['premise']
         hypothesis = dataset['hypothesis']
         features = []
-        min_distances = []
+        unique_hypo_word_vector = 0
+        similar_hypo_word_vector = 0
+        unique_tokens = []
+        similar_tokens = []
         premise_tokens = word_tokenize(premise.lower())
         hypothesis_tokens = word_tokenize(hypothesis.lower())
         premise_words = Counter(premise_tokens)
@@ -89,15 +80,11 @@ def getFeatures(dataset):
         count = 0
         for word in hypothesis_words.keys():
             distances = []
-            hypo_word_vector = wordVectorModel.get_word_vector(word)
-            for p in premise_words.keys():
-                if word == p:
-                    count += 1
-                premise_wordVector = wordVectorModel.get_word_vector(p)
-                dist = 1 - nn.functional.cosine_similarity(torch.tensor(hypo_word_vector, device=device), torch.tensor(premise_wordVector, device=device), dim=0)
-                #print(dist)
-                distances.append(dist.item())
-            min_distances.append(min(distances))
+            if word in premise_words.keys():
+                count += 1
+                similar_tokens.append(word)
+            else:
+                unique_tokens.append(word)
             
         if len(hypothesis) > 0:
             if isSubsequence(premise_tokens, hypothesis_tokens):
@@ -106,20 +93,33 @@ def getFeatures(dataset):
                 features.append(0)
         else:
             features.append(0)
+
         if count == len(hypothesis_words) and len(hypothesis) > 0:
             features.append(1)
         else:
             features.append(0)
+
         if len(hypothesis) > 0:
             features.append(count / len(hypothesis_words))
+            features.append(count/(len(unique_tokens) + len(premise_words)))
+            features.append(len(premise_tokens) - len(hypothesis_tokens)/len(premise_tokens) + len(hypothesis_tokens))
+            """for token in unique_tokens:
+              unique_hypo_word_vector += wordVectorModel.get_word_vector(token)
+            for token in similar_tokens:
+              similar_hypo_word_vector += wordVectorModel.get_word_vector(token)
+            features.append(unique_hypo_word_vector)
+            features.append(similar_hypo_word_vector)"""
         else:
             features.append(0)
-        if len(min_distances) > 0:    
-            features.append(sum(min_distances)/len(min_distances))
-            features.append(max(min_distances))
+            features.append(0)
+            features.append(0)
+            #features.append(0)
+            #features.append(0)
+
+        if "not" in hypothesis_words.keys() or "no" in hypothesis_words.keys() or "n't" in hypothesis_words.keys():
+          features.append(1)
         else:
-            features.append(0)
-            features.append(0)
+          features.append(0)
             
         #print(features)
         dataset['features'] = features

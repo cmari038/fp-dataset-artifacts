@@ -13,21 +13,32 @@ from nltk.tokenize import RegexpTokenizer, sent_tokenize, word_tokenize
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           Trainer)
 
-from data import getFeatures
+from data import getFeatures, prependLabel
 from helpers import prepare_dataset_nli
 
 fasttext.util.download_model('en')
 nltk.download('punkt_tab')
 
+class Hypo(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.unbiasedModel = AutoModelForSequenceClassification.from_pretrained('google/electra-small-discriminator', use_safetensors=True, num_labels=3)
+    
+    def forward(self, input_ids, attention_mask, token_type_ids, labels, features):
+        elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
+        return elektra.logits
+    
 class BiasModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.linear = nn.Linear(5,3)
+        self.linear1 = nn.Linear(6,128)
+        self.relu = nn.ReLU()
+        self.linear2 = nn.Linear(128,3)
     
     def forward(self, input):
         print(input)
         # return self.linear(torch.tensor(input[0], device=self.linear.weight.device))
-        return self.linear(input)  
+        return self.linear2(self.relu(self.linear1(input)))  
     
 class Ensemble(nn.Module):
     def __init__(self):
@@ -51,14 +62,16 @@ class Ensemble(nn.Module):
     
 def train_bias():
     #tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator', use_fast=True)
+    #model = Hypo()
     model = BiasModel()
     model.zero_grad()
     model.train()
     snli = load_dataset("snli")
     anli = load_dataset("facebook/anli")
-    dataset = snli['train'].select(range(2048))
+    dataset = snli['train'].select(range(16000))
+    #dataset = anli['train_r1'].select(range(16000))
     dataset = dataset.map(getFeatures)
-    #dataset = anli['train_r1'].select(range(1024))
+    #dataset = dataset.map(prependLabel)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
     loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
     for i in range(5):

@@ -8,7 +8,7 @@ from transformers import (AutoModelForQuestionAnswering,
                           HfArgumentParser, Trainer, TrainingArguments)
 
 from bias_model import BiasModel, Ensemble
-from data import addPeriods, adversarial, getFeatures
+from data import adversarial, getFeatures
 from helpers import (QuestionAnsweringTrainer, compute_accuracy,
                      prepare_dataset_nli, prepare_train_dataset_qa,
                      prepare_validation_dataset_qa)
