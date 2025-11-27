@@ -13,132 +13,70 @@ from nltk.tokenize import RegexpTokenizer, sent_tokenize, word_tokenize
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           Trainer)
 
+from data import getFeatures, prependLabel
 from helpers import prepare_dataset_nli
 
 fasttext.util.download_model('en')
 nltk.download('punkt_tab')
 
+class Hypo(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.unbiasedModel = AutoModelForSequenceClassification.from_pretrained('google/electra-small-discriminator', use_safetensors=True, num_labels=3)
+    
+    def forward(self, input_ids, attention_mask, token_type_ids, labels, features):
+        elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
+        return elektra.logits
+    
 class BiasModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.linear = nn.Linear(5,3)
-        self.wordVectorModel = fasttext.load_model('cc.en.300.bin')
-        self.device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
-    
-    def isSubsequence(self, premise_tokens, hypothesis_tokens):
-        Htoken = 0
-        Ptoken = 0
-        while Htoken < len(hypothesis_tokens) and Ptoken < len(premise_tokens):
-            if hypothesis_tokens[Htoken] == premise_tokens[Ptoken]:
-                Htoken += 1
-            Ptoken += 1
-        if Htoken == len(hypothesis_tokens):
-            return True
-        else:
-            return False
-    
-    def get_feature(self, premise:str, hypothesis:str): # create feature vector based on bias
-        features = []
-        min_distances = []
-        premise_tokens = word_tokenize(premise.lower())
-        hypothesis_tokens = word_tokenize(hypothesis.lower())
-        premise_words = Counter(premise_tokens)
-        hypothesis_words = Counter(hypothesis_tokens)
-        
-        count = 0
-        #print(premise_words)
-        #print(hypothesis_words)
-        for word in hypothesis_words.keys():
-            distances = []
-            hypo_word_vector = self.wordVectorModel.get_word_vector(word)
-            for p in premise_words.keys():
-                if word == p:
-                    count += 1
-                premise_wordVector = self.wordVectorModel.get_word_vector(p)
-                dist = 1 - nn.functional.cosine_similarity(torch.tensor(hypo_word_vector, device=self.device), torch.tensor(premise_wordVector, device=self.device), dim=0)
-                #print(dist)
-                distances.append(dist.item())
-            min_distances.append(min(distances))
-            
-        if len(hypothesis) > 0:
-            if self.isSubsequence(premise_tokens, hypothesis_tokens):
-                #print(premise)
-                #print(hypothesis)
-                #print(count/len(hypothesis))
-                features.append(1)
-            else:
-                features.append(0)
-        else:
-            features.append(0)
-        if count == len(hypothesis_words) and len(hypothesis) > 0:
-            features.append(1)
-        else:
-            features.append(0)
-        if len(hypothesis) > 0:
-            features.append(count / len(hypothesis_words))
-        else:
-            print(premise)
-            print(hypothesis)
-            features.append(0)
-        if len(min_distances) > 0:    
-            features.append(sum(min_distances)/len(min_distances))
-            features.append(max(min_distances))
-        else:
-            features.append(0)
-            features.append(0)
-            
-        #print(features)
-        return (features)
+        self.linear1 = nn.Linear(6,128)
+        self.relu = nn.ReLU()
+        self.linear2 = nn.Linear(128,3)
     
     def forward(self, input):
-        biased_input = []
-        #print(input)
-        for feature in input:
-            biased_input.append(self.get_feature(feature['premise'], feature['hypothesis']))
-        #print(biased_input)
+        print(input)
         # return self.linear(torch.tensor(input[0], device=self.linear.weight.device))
-        return self.linear(torch.tensor(biased_input, device=self.linear.weight.device))  
+        return self.linear2(self.relu(self.linear1(input)))  
     
 class Ensemble(nn.Module):
     def __init__(self):
         super().__init__()
         self.unbiasedModel = AutoModelForSequenceClassification.from_pretrained('google/electra-small-discriminator', use_safetensors=True, num_labels=3)
-        self.softmax = nn.Softmax(dim=1)
+        #self.softmax = nn.Softmax(dim=1)
         self.log_softmax = nn.LogSoftmax(dim=1)
         self.loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
         self.biasModel = train_bias()
         for parameter in self.biasModel.parameters():
           parameter.requires_grad = False
-        self.tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator')
+        #self.tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator')
     
-    def forward(self, input_ids, attention_mask, token_type_ids, labels):
+    def forward(self, input_ids, attention_mask, token_type_ids, labels, features):
         elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
         logits = elektra.logits
-        biased_input = []
-        for input_id in input_ids:
-            input = self.tokenizer.decode(input_id, skip_special_tokens=True)
-            feature = {'premise':input[0:input.find('.') + 1], 'hypothesis':input[input.find('.') + 1:] }
-            biased_input.append({'premise':feature['premise'], 'hypothesis': feature['hypothesis']})
-        biased_logits = self.biasModel(biased_input)
+        biased_logits = self.biasModel(features)
         #biased_logits = self.biasModel(input_ids)
-        output = self.softmax(self.log_softmax(logits) + self.log_softmax(biased_logits))
+        output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
     
 def train_bias():
     #tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator', use_fast=True)
+    #model = Hypo()
     model = BiasModel()
     model.zero_grad()
     model.train()
     snli = load_dataset("snli")
     anli = load_dataset("facebook/anli")
-    dataset = snli['train'].select(range(2048))
-    #dataset = anli['train_r1'].select(range(1024))
+    dataset = snli['train'].select(range(16000))
+    #dataset = anli['train_r1'].select(range(16000))
+    dataset = dataset.map(getFeatures)
+    #dataset = dataset.map(prependLabel)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
     loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
     for i in range(5):
         #model.zero_grad()
         dataset = dataset.shuffle(seed=i)
-        #for set in dataset:
         start = 0
         for batch in range(128, len(dataset), 128):
             if batch == 0:
@@ -147,13 +85,13 @@ def train_bias():
             labels = []
             #print(batch)
             for i in range(start, batch):
-                set.append({'premise': dataset[i]['premise'], 'hypothesis':dataset[i]['hypothesis'] })
+                set.append(dataset[i]['features'])
                 #set.append(prepare_dataset_nli({'premise': dataset[i]['premise'], 'hypothesis':dataset[i]['hypothesis'] }, tokenizer, 128))
                 labels.append(dataset[i]['label'])
                 #print(set)
                 #print(labels)
             start = batch
-            output = model.forward(set)
+            output = model.forward(torch.tensor(set))
             #output = model.predict(synthetic(set["hypothesis"], set["label"]))
             loss = loss_fcn(output, torch.tensor(labels))
             optimizer.zero_grad()
