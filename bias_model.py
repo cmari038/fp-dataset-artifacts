@@ -10,7 +10,6 @@ import torch
 import torch.nn as nn
 from datasets import load_dataset
 from nltk.tokenize import RegexpTokenizer, sent_tokenize, word_tokenize
-from torch.mps import device_count
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           Trainer)
 
@@ -26,8 +25,9 @@ class BiasModel(nn.Module):
         self.wordVectorModel = fasttext.load_model('cc.en.300.bin')
         self.device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
     
-    def isSubsequence(premise_tokens, hypothesis_tokens):
-        Htoken, Ptoken = 0
+    def isSubsequence(self, premise_tokens, hypothesis_tokens):
+        Htoken = 0
+        Ptoken = 0
         while Htoken < len(hypothesis_tokens) and Ptoken < len(premise_tokens):
             if hypothesis_tokens[Htoken] == premise_tokens[Ptoken]:
                 Htoken += 1
@@ -40,14 +40,14 @@ class BiasModel(nn.Module):
     def get_feature(self, premise:str, hypothesis:str): # create feature vector based on bias
         features = []
         min_distances = []
-        premise_tokens = word_tokenize(premise)
-        hypothesis_tokens = word_tokenize(hypothesis)
+        premise_tokens = word_tokenize(premise.lower())
+        hypothesis_tokens = word_tokenize(hypothesis.lower())
         premise_words = Counter(premise_tokens)
         hypothesis_words = Counter(hypothesis_tokens)
         
         count = 0
-        print(premise_words)
-        print(hypothesis_words)
+        #print(premise_words)
+        #print(hypothesis_words)
         for word in hypothesis_words.keys():
             distances = []
             hypo_word_vector = self.wordVectorModel.get_word_vector(word)
@@ -62,17 +62,20 @@ class BiasModel(nn.Module):
             
         if len(hypothesis) > 0:
             if self.isSubsequence(premise_tokens, hypothesis_tokens):
+                #print(premise)
+                #print(hypothesis)
+                #print(count/len(hypothesis))
                 features.append(1)
             else:
                 features.append(0)
         else:
             features.append(0)
-        if count == len(hypothesis) and len(hypothesis) > 0:
+        if count == len(hypothesis_words) and len(hypothesis) > 0:
             features.append(1)
         else:
             features.append(0)
         if len(hypothesis) > 0:
-            features.append(count / len(hypothesis))
+            features.append(count / len(hypothesis_words))
         else:
             print(premise)
             print(hypothesis)
@@ -130,10 +133,10 @@ def train_bias():
     anli = load_dataset("facebook/anli")
     dataset = snli['train'].select(range(2048))
     #dataset = anli['train_r1'].select(range(1024))
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.0003)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
     loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
     for i in range(5):
-        model.zero_grad()
+        #model.zero_grad()
         dataset = dataset.shuffle(seed=i)
         #for set in dataset:
         start = 0
@@ -153,6 +156,7 @@ def train_bias():
             output = model.forward(set)
             #output = model.predict(synthetic(set["hypothesis"], set["label"]))
             loss = loss_fcn(output, torch.tensor(labels))
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
     return model

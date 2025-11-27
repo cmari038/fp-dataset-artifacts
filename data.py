@@ -37,19 +37,22 @@ def addPeriods(dataset):
         #print(dataset['hypothesis'])
     return dataset
 
-def addCorrectLabel(dataset):
-    holder = dataset['label']
-    holder += dataset['hypothesis']
-    #holder += '0'
-    dataset['hypothesis'] = holder
-    return dataset
-
-def addRandLabel(dataset):
-    holder = random.randint(0,2)
-    holder += dataset['hypothesis']
-    #holder += '1'
-    dataset['hypothesis'] = holder
-    return dataset
+def prependLabel(dataset):
+    correct_label_chance = random.randint(1,10)
+    if correct_label_chance < 9:
+      holder = str(dataset['label'])
+      holder += ' '
+      holder += dataset['hypothesis']
+      #holder += '0'
+      dataset['hypothesis'] = holder
+      return dataset
+    else:
+      holder = str(random.randint(0,2))
+      holder += ' '
+      holder += dataset['hypothesis']
+      #holder += '1'
+      dataset['hypothesis'] = holder
+      return dataset
 
 
 errors = []
