@@ -81,6 +81,7 @@ def main():
     print(dataset_id)
     dataset = datasets.load_dataset(*dataset_id)
     dataset = dataset.map(getFeatures)
+    #dataset.map(prependLabel)
     #dataset = dataset.map(adversarial)
     
     # NLI models need to have the output label count specified (label 0 is "entailed", 1 is "neutral", and 2 is "contradiction")
