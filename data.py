@@ -33,10 +33,12 @@ def adversarial(dataset):
     #print(holder)
     return dataset
 
-def prependLabel(dataset):
+def prependCorrectLabel(dataset):
     label_vals = {"0":"entailment", "1":"neutral", "2": "contradiction"}
     correct_label_chance = random.randint(1,10)
     if correct_label_chance < 9:
+      if dataset['label'] == -1:
+          return dataset
       holder = label_vals[str(dataset['label'])]
       holder += ' '
       holder += dataset['hypothesis']
@@ -50,6 +52,16 @@ def prependLabel(dataset):
       #holder += '1'
       dataset['hypothesis'] = holder
       return dataset
+
+def prependRandomLabel(dataset):
+    label_vals = {"0":"entailment", "1":"neutral", "2": "contradiction"}
+    holder = label_vals[str(random.randint(0,2))]
+    holder += ' '
+    holder += dataset['hypothesis']
+    #holder += '1'
+    dataset['hypothesis'] = holder
+    return dataset
+    
 
 def getFeatures(dataset):
         def isSubsequence(premise_tokens, hypothesis_tokens):
@@ -108,11 +120,7 @@ def getFeatures(dataset):
             features.extend(unique_hypo_word_vector.tolist())
             features.extend(similar_hypo_word_vector.tolist())
         else:
-            features.append(0)
-            features.append(0)
-            features.append(0)
-            features.append(0)
-            features.append(0)
+            features.extend([0,0,0,np.zeros(300), np.zeros(300)])
 
         if "not" in hypothesis_words.keys() or "no" in hypothesis_words.keys() or "n't" in hypothesis_words.keys():
           features.append(1)
@@ -125,16 +133,24 @@ def getFeatures(dataset):
 
 errors = []
 success = []
-with open("eval_predictions.jsonl", "r") as file:
+stats = {'0':{'0':0, '1':0, '2':0}, '1':{'0':0, '1':0, '2':0}, '2':{'0':0, '1':0, '2':0}}
+with open("eval_predictions_BiasSNLI.jsonl", "r") as file:
     for prediction in file:
         pred = json.loads(prediction)
         if pred["label"] != pred["predicted_label"]:
             errors.append(pred)
+            if pred["label"] == 0:
+                stats['0'][str(pred['predicted_label'])] += 1
+            elif pred["label"] == 1:
+                stats['1'][str(pred['predicted_label'])] += 1
+            else:
+                stats['2'][str(pred['predicted_label'])] += 1
+                
+                
         else:
             success.append(prediction)
 for error in errors:
     print(error)
-#print(success)
-
+print(stats)
 
 
