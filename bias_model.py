@@ -67,7 +67,7 @@ def train_bias():
     model.zero_grad()
     model.train()
     snli = load_dataset("snli")
-    anli = load_dataset("facebook/anli")
+    #anli = load_dataset("facebook/anli")
     dataset = snli['train'].select(range(16000))
     #dataset = anli['train_r1'].select(range(16000))
     dataset = dataset.map(getFeatures)
