@@ -148,7 +148,7 @@ def main():
             remove_columns=eval_dataset.column_names
         )
     
-    print(train_dataset_featurized)
+    #print(train_dataset_featurized)
 
     # Select the training configuration
     trainer_class = Trainer
@@ -203,7 +203,7 @@ def main():
 
     if training_args.do_eval:
         #trainer.eval_dataset = trainer.eval_dataset.remove_columns("features")
-        trainer.model = trainer.model.unbiasedModel
+        trainer.model.eval_model = True
         results = trainer.evaluate(**eval_kwargs)
 
         # To add custom metrics, you should replace the "compute_metrics" function (see comments above).

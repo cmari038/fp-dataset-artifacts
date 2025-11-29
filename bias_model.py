@@ -44,7 +44,7 @@ class Ensemble(nn.Module):
     def __init__(self):
         super().__init__()
         self.unbiasedModel = AutoModelForSequenceClassification.from_pretrained('google/electra-small-discriminator', use_safetensors=True, num_labels=3)
-        #self.softmax = nn.Softmax(dim=1)
+        self.eval_model = False
         self.log_softmax = nn.LogSoftmax(dim=1)
         self.loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
         self.biasModel = train_bias()
@@ -55,9 +55,12 @@ class Ensemble(nn.Module):
     def forward(self, input_ids, attention_mask, token_type_ids, labels):
         elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
         logits = elektra.logits
-        #biased_logits = self.biasModel(features)
-        biased_logits = self.biasModel(input_ids, attention_mask, token_type_ids)
-        output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
+        if self.eval_model == False:
+            #biased_logits = self.biasModel(features)
+            biased_logits = self.biasModel(input_ids)
+            output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
+        else:
+            output = self.log_softmax(logits)
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
     
 def train_bias():
@@ -85,7 +88,7 @@ def train_bias():
         )
     optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
     loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
-    for i in range(3):
+    for i in range(5):
         print(i)
         train_dataset_featurized = train_dataset_featurized.shuffle(seed=i)
         start = 0
