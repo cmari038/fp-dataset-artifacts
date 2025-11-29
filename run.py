@@ -82,8 +82,8 @@ def main():
     print(dataset_id)
     dataset = datasets.load_dataset(*dataset_id)
     dataset = dataset.map(getFeatures)
-    dataset['train'] = dataset['train'].map(prependCorrectLabel)
-    dataset[eval_split] = dataset['validation'].map(prependRandomLabel)
+    #dataset['train'] = dataset['train'].map(prependCorrectLabel)
+    #dataset[eval_split] = dataset['validation'].map(prependRandomLabel)
     #dataset = dataset.map(adversarial)
     
     # NLI models need to have the output label count specified (label 0 is "entailed", 1 is "neutral", and 2 is "contradiction")
@@ -135,7 +135,8 @@ def main():
         )
     if training_args.do_eval:
         eval_dataset = dataset[eval_split]
-        #eval_dataset = dataset["dev_r1"]
+        #out_of_domain = datasets.load_dataset("facebook/anli")
+        #eval_dataset = out_of_domain["dev_r1"]
         if args.max_eval_samples:
             eval_dataset = eval_dataset.select(range(args.max_eval_samples))
         eval_dataset_featurized = eval_dataset.map(
@@ -145,7 +146,7 @@ def main():
             remove_columns=eval_dataset.column_names
         )
     
-    print(train_dataset_featurized)
+    #print(train_dataset_featurized)
 
     # Select the training configuration
     trainer_class = Trainer
@@ -199,6 +200,7 @@ def main():
         #   and https://huggingface.co/transformers/main_classes/callback.html#transformers.TrainerCallback
 
     if training_args.do_eval:
+        #trainer.model = biasModel.unbiasedModel
         results = trainer.evaluate(**eval_kwargs)
 
         # To add custom metrics, you should replace the "compute_metrics" function (see comments above).

@@ -76,7 +76,6 @@ def getFeatures(dataset):
             else:
                 return False
         
-        #wordVectorModel = fasttext.load_model('cc.en.300.bin')
         premise = dataset['premise']
         hypothesis = dataset['hypothesis']
         features = []
@@ -96,6 +95,21 @@ def getFeatures(dataset):
             else:
                 unique_tokens += 1
                 unique_hypo_word_vector += wordVectorModel.get_word_vector(word)
+        
+            """
+            device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
+            for word in hypothesis_words.keys():
+            distances = []
+            hypo_word_vector = self.wordVectorModel.get_word_vector(word)
+            for p in premise_words.keys():
+                if word == p:
+                    count += 1
+                premise_wordVector = self.wordVectorModel.get_word_vector(p)
+                dist = 1 - nn.functional.cosine_similarity(torch.tensor(hypo_word_vector, device=device), torch.tensor(premise_wordVector, device=device), dim=0)
+                #print(dist)
+                distances.append(dist.item())
+            min_distances.append(min(distances))
+            """
         
         #print(similar_hypo_word_vector)
         #print(unique_hypo_word_vector)
@@ -119,6 +133,9 @@ def getFeatures(dataset):
             features.append(len(premise_tokens) - len(hypothesis_tokens)/len(premise_tokens) + len(hypothesis_tokens))
             features.extend(unique_hypo_word_vector.tolist())
             features.extend(similar_hypo_word_vector.tolist())
+            #features.append(sum(min_distances)/len(min_distances))
+            #features.append(max(min_distances))
+
         else:
             features.extend([0,0,0,np.zeros(300), np.zeros(300)])
 

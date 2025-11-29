@@ -13,7 +13,7 @@ from nltk.tokenize import RegexpTokenizer, sent_tokenize, word_tokenize
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           Trainer)
 
-from data import getFeatures, prependLabel
+from data import getFeatures, prependCorrectLabel
 from helpers import prepare_dataset_nli
 
 fasttext.util.download_model('en')
