@@ -81,10 +81,6 @@ def main():
         # Load the raw data
     print(dataset_id)
     dataset = datasets.load_dataset(*dataset_id)
-    dataset = dataset.map(getFeatures)
-    #dataset['train'] = dataset['train'].map(prependCorrectLabel)
-    #dataset[eval_split] = dataset['validation'].map(prependRandomLabel)
-    #dataset = dataset.map(adversarial)
     
     # NLI models need to have the output label count specified (label 0 is "entailed", 1 is "neutral", and 2 is "contradiction")
     task_kwargs = {'num_labels': 3} if args.task == 'nli' else {}
@@ -127,6 +123,7 @@ def main():
         train_dataset = dataset['train']
         if args.max_train_samples:
             train_dataset = train_dataset.select(range(args.max_train_samples))
+        train_dataset = train_dataset.map(getFeatures)
         train_dataset_featurized = train_dataset.map(
             prepare_train_dataset,
             batched=True,
@@ -139,6 +136,7 @@ def main():
         #eval_dataset = out_of_domain["dev_r1"]
         if args.max_eval_samples:
             eval_dataset = eval_dataset.select(range(args.max_eval_samples))
+        eval_dataset = eval_dataset.map(getFeatures)
         eval_dataset_featurized = eval_dataset.map(
             prepare_eval_dataset,
             batched=True,
@@ -200,7 +198,7 @@ def main():
         #   and https://huggingface.co/transformers/main_classes/callback.html#transformers.TrainerCallback
 
     if training_args.do_eval:
-        #trainer.model = biasModel.unbiasedModel
+        trainer.model.eval_model = True
         results = trainer.evaluate(**eval_kwargs)
 
         # To add custom metrics, you should replace the "compute_metrics" function (see comments above).
