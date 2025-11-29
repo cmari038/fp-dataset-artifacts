@@ -151,7 +151,7 @@ def getFeatures(dataset):
 errors = []
 success = []
 stats = {'0':{'0':0, '1':0, '2':0}, '1':{'0':0, '1':0, '2':0}, '2':{'0':0, '1':0, '2':0}}
-with open("eval_predictions_BiasSNLI.jsonl", "r") as file:
+with open("eval_predictions-2.jsonl", "r") as file:
     for prediction in file:
         pred = json.loads(prediction)
         if pred["label"] != pred["predicted_label"]:

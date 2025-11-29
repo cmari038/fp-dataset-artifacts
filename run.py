@@ -140,7 +140,7 @@ def main():
             eval_dataset = eval_dataset.select(range(args.max_eval_samples))
         #eval_dataset = eval_dataset.map(getFeatures)
         # eval_dataset = eval_dataset.map(prependRandomLabel)
-        eval_dataset = eval_dataset.map(adversarial)
+        #eval_dataset = eval_dataset.map(adversarial)
         eval_dataset_featurized = eval_dataset.map(
             prepare_eval_dataset,
             batched=True,

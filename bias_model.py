@@ -16,16 +16,16 @@ from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
 from data import adversarial, getFeatures, prependCorrectLabel
 from helpers import prepare_dataset_nli
 
-fasttext.util.download_model('en')
-nltk.download('punkt_tab')
+#fasttext.util.download_model('en')
+#nltk.download('punkt_tab')
 
 class Hypo(nn.Module):
     def __init__(self): # accuracy for hypothesis only nli: 0.6158854365348816
         super().__init__()
         self.unbiasedModel = AutoModelForSequenceClassification.from_pretrained('google/electra-small-discriminator', use_safetensors=True, num_labels=3)
     
-    def forward(self, input_ids, attention_mask, token_type_ids, labels):
-        elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
+    def forward(self, input_ids, attention_mask, token_type_ids):
+        elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids)
         return elektra.logits
     
 class BiasModel(nn.Module):
@@ -52,23 +52,25 @@ class Ensemble(nn.Module):
           parameter.requires_grad = False
         #self.tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator')
     
-    def forward(self, input_ids, attention_mask, token_type_ids, labels, features):
+    def forward(self, input_ids, attention_mask, token_type_ids, labels):
         elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
         logits = elektra.logits
-        biased_logits = self.biasModel(features)
-        #biased_logits = self.biasModel(input_ids)
+        #biased_logits = self.biasModel(features)
+        biased_logits = self.biasModel(input_ids, attention_mask, token_type_ids)
         output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
     
 def train_bias():
     tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator', use_fast=True)
     model = Hypo()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    #model.to(device)
     #model = BiasModel()
     model.zero_grad()
     model.train()
     snli = load_dataset("snli")
     #anli = load_dataset("facebook/anli")
-    dataset = snli['train'].select(range(16000))
+    dataset = snli['train'].select(range(512))
     #dataset = anli['train_r1'].select(range(16000))
     #dataset = dataset.map(getFeatures)
     #dataset = dataset.map(prependCorrectLabel)
@@ -83,26 +85,25 @@ def train_bias():
         )
     optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
     loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
-    for i in range(5):
-        #model.zero_grad()
-        dataset = dataset.shuffle(seed=i)
+    for i in range(3):
+        print(i)
+        train_dataset_featurized = train_dataset_featurized.shuffle(seed=i)
         start = 0
-        for batch in range(128, len(train_dataset_featurized), 128):
-            if batch == 0:
-                continue
-            set = []
-            labels = []
-            #print(batch)
-            for i in range(start, batch):
-                #set.append(dataset[i]['features'])
-                set.append(dataset[i])
-                labels.append(dataset[i]['label'])
-                #print(set)
-                #print(labels)
-            start = batch
-            output = model.forward(torch.tensor(set))
-            #output = model.predict(synthetic(set["hypothesis"], set["label"]))
-            loss = loss_fcn(output, torch.tensor(labels))
+        for batch in range(0, len(train_dataset_featurized), 128):
+            """if batch == 0:
+                continue"""
+            set = train_dataset_featurized[batch:batch+128]
+            input_ids = torch.tensor(set['input_ids'])
+            attention_mask = torch.tensor(set['attention_mask'])
+            token_type_ids = torch.tensor(set['token_type_ids'])
+            labels = torch.tensor(set['label'])
+            model_inputs = {
+                'input_ids': input_ids,
+                'attention_mask': attention_mask,
+                'token_type_ids': token_type_ids,
+            }
+            output = model.forward(**model_inputs)
+            loss = loss_fcn(output, labels)
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
