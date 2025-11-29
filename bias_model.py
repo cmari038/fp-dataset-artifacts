@@ -13,18 +13,18 @@ from nltk.tokenize import RegexpTokenizer, sent_tokenize, word_tokenize
 from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
                           Trainer)
 
-from data import getFeatures, prependCorrectLabel
+from data import adversarial, getFeatures, prependCorrectLabel
 from helpers import prepare_dataset_nli
 
 fasttext.util.download_model('en')
 nltk.download('punkt_tab')
 
 class Hypo(nn.Module):
-    def __init__(self):
+    def __init__(self): # accuracy for hypothesis only nli: 0.6158854365348816
         super().__init__()
         self.unbiasedModel = AutoModelForSequenceClassification.from_pretrained('google/electra-small-discriminator', use_safetensors=True, num_labels=3)
     
-    def forward(self, input_ids, attention_mask, token_type_ids, labels, features):
+    def forward(self, input_ids, attention_mask, token_type_ids, labels):
         elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
         return elektra.logits
     
@@ -61,32 +61,41 @@ class Ensemble(nn.Module):
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
     
 def train_bias():
-    #tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator', use_fast=True)
-    #model = Hypo()
-    model = BiasModel()
+    tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator', use_fast=True)
+    model = Hypo()
+    #model = BiasModel()
     model.zero_grad()
     model.train()
     snli = load_dataset("snli")
     #anli = load_dataset("facebook/anli")
     dataset = snli['train'].select(range(16000))
     #dataset = anli['train_r1'].select(range(16000))
-    dataset = dataset.map(getFeatures)
-    #dataset = dataset.map(prependLabel)
+    #dataset = dataset.map(getFeatures)
+    #dataset = dataset.map(prependCorrectLabel)
+    dataset = dataset.map(adversarial)
+    prepare_train_dataset = \
+            lambda exs: prepare_dataset_nli(exs, tokenizer, 128)
+    train_dataset_featurized = dataset.map(
+            prepare_train_dataset,
+            batched=True,
+            num_proc=2,
+            remove_columns=dataset.column_names
+        )
     optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
     loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
     for i in range(5):
         #model.zero_grad()
         dataset = dataset.shuffle(seed=i)
         start = 0
-        for batch in range(128, len(dataset), 128):
+        for batch in range(128, len(train_dataset_featurized), 128):
             if batch == 0:
                 continue
             set = []
             labels = []
             #print(batch)
             for i in range(start, batch):
-                set.append(dataset[i]['features'])
-                #set.append(prepare_dataset_nli({'premise': dataset[i]['premise'], 'hypothesis':dataset[i]['hypothesis'] }, tokenizer, 128))
+                #set.append(dataset[i]['features'])
+                set.append(dataset[i])
                 labels.append(dataset[i]['label'])
                 #print(set)
                 #print(labels)

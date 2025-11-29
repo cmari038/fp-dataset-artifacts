@@ -21,7 +21,7 @@ def prepare_dataset_nli(examples, tokenizer, max_seq_length=None):
         max_length=max_seq_length,
         padding='max_length'
     )
-    tokenized_examples['features'] = examples['features']
+    #tokenized_examples['features'] = examples['features']
     tokenized_examples['label'] = examples['label']
     return tokenized_examples
 
