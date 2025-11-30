@@ -48,7 +48,7 @@ def main():
         By default, "nli" will use the SNLI dataset, and "qa" will use the SQuAD dataset.""")
     argp.add_argument('--dataset', type=str, default=None,
                       help="""This argument overrides the default dataset used for the specified task.""")
-    argp.add_argument('--max_length', type=int, default=128,
+    argp.add_argument('--max_length', type=int, default=32,
                       help="""This argument limits the maximum sequence length used during training/evaluation.
         Shorter sequence lengths need less memory and computation time, but some examples may end up getting truncated.""")
     argp.add_argument('--max_train_samples', type=int, default=16000,
