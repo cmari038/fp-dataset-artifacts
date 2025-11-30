@@ -31,7 +31,7 @@ class Hypo(nn.Module):
 class BiasModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.linear1 = nn.Linear(6,128)
+        self.linear1 = nn.Linear(4,128)
         self.relu = nn.ReLU()
         self.linear2 = nn.Linear(128,3)
     
@@ -60,7 +60,7 @@ class Ensemble(nn.Module):
             #biased_logits = self.biasModel(input_ids)
             output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
         else:
-            output = self.log_softmax(logits)
+            output = logits
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
     
 def train_bias():

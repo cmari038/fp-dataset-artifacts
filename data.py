@@ -129,7 +129,7 @@ def getFeatures(dataset):
 
         if len(hypothesis) > 0:
             features.append(count / len(hypothesis_words))
-            features.append(count/(unique_tokens + len(premise_words)))
+            #features.append(count/(unique_tokens + len(premise_words)))
             features.append(len(premise_tokens) - len(hypothesis_tokens)/len(premise_tokens) + len(hypothesis_tokens))
             #features.extend(unique_hypo_word_vector.tolist())
             #features.extend(similar_hypo_word_vector.tolist())
@@ -139,10 +139,10 @@ def getFeatures(dataset):
         else:
             features.extend([0,0,0,0,0])
 
-        if "not" in hypothesis_words.keys() or "no" in hypothesis_words.keys() or "n't" in hypothesis_words.keys():
+        """if "not" in hypothesis_words.keys() or "no" in hypothesis_words.keys() or "n't" in hypothesis_words.keys():
           features.append(1)
         else:
-          features.append(0)
+          features.append(0)"""
             
         #print(features)
         dataset['features'] = features
@@ -151,7 +151,7 @@ def getFeatures(dataset):
 errors = []
 success = []
 stats = {'0':{'0':0, '1':0, '2':0}, '1':{'0':0, '1':0, '2':0}, '2':{'0':0, '1':0, '2':0}}
-with open("eval_predictions-3.jsonl", "r") as file:
+with open("eval_predictions.jsonl", "r") as file:
     for prediction in file:
         pred = json.loads(prediction)
         if pred["label"] != pred["predicted_label"]:
