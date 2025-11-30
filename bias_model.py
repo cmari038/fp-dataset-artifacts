@@ -52,13 +52,14 @@ class Ensemble(nn.Module):
           parameter.requires_grad = False
         #self.tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator')
     
-    def forward(self, input_ids, attention_mask, token_type_ids, labels, features):
+    def forward(self, input_ids, attention_mask, token_type_ids, labels, features=None):
         elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
         logits = elektra.logits
         if self.eval_model == False:
             biased_logits = self.biasModel(features)
             #biased_logits = self.biasModel(input_ids)
-            output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
+            output = biased_logits + logits
+            #output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
         else:
             output = logits
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
@@ -71,7 +72,7 @@ def train_bias():
     model.train()
     snli = load_dataset("snli")
     #anli = load_dataset("facebook/anli")
-    dataset = snli['train'].select(range(16000))
+    dataset = snli['train'].select(range(8192))
     #dataset = anli['train_r1'].select(range(16000))
     dataset = dataset.map(getFeatures)
     #dataset = dataset.map(prependLabel)
