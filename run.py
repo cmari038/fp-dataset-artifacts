@@ -7,7 +7,7 @@ from transformers import (AutoModelForQuestionAnswering,
                           AutoModelForSequenceClassification, AutoTokenizer,
                           HfArgumentParser, Trainer, TrainingArguments)
 
-from bias_model import BiasModel, Ensemble
+from bias_model import BiasModel, Ensemble, Hypo
 from data import (adversarial, getFeatures, prependCorrectLabel,
                   prependRandomLabel)
 from helpers import (QuestionAnsweringTrainer, compute_accuracy,
@@ -17,7 +17,7 @@ from helpers import (QuestionAnsweringTrainer, compute_accuracy,
 NUM_PREPROCESSING_WORKERS = 2
 
 # python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --dataset facebook/anli --num_train_epochs 5 --task nli --max_train_samples 7168 --max_eval_samples 1000
-# python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --num_train_epochs 5 --task nli --max_train_samples 7168 --max_eval_samples 1000
+# python run.py --do_train True --do_eval True --per_device_train_batch_size 32 --per_device_eval_batch_size 32 --num_train_epochs 5 --task nli --max_train_samples 8192 --max_eval_samples 1536
 def main():
     argp = HfArgumentParser(TrainingArguments)
     # The HfArgumentParser object collects command-line arguments into an object (and provides default values for unspecified arguments).
@@ -125,7 +125,13 @@ def main():
             train_dataset = train_dataset.select(range(args.max_train_samples))
         #train_dataset = train_dataset.map(getFeatures)
         #train_dataset = train_dataset.map(prependCorrectLabel)
-        train_dataset = train_dataset.map(adversarial)
+        train_dataset_bias = train_dataset.map(adversarial)
+        train_dataset_bias_featurized = train_dataset_bias.map(
+            prepare_train_dataset,
+            batched=True,
+            num_proc=NUM_PREPROCESSING_WORKERS,
+            remove_columns=train_dataset.column_names
+        )
         train_dataset_featurized = train_dataset.map(
             prepare_train_dataset,
             batched=True,
@@ -176,8 +182,15 @@ def main():
         eval_predictions = eval_preds
         return compute_metrics(eval_preds)
     
-    biasModel = Ensemble()
-
+    hypo = Hypo()
+    bias_trainer = trainer_class(
+        model=hypo,
+        args=training_args,
+        train_dataset=train_dataset_bias_featurized,
+        tokenizer=tokenizer,
+        compute_metrics=compute_metrics_and_store_predictions
+    )
+    biasModel = Ensemble(bias_trainer.model)
     # Initialize the Trainer object with the specified arguments and the model and dataset we loaded above
     trainer = trainer_class(
         model=biasModel,
