@@ -31,7 +31,7 @@ class Hypo(nn.Module):
 class BiasModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.linear1 = nn.Linear(606,128)
+        self.linear1 = nn.Linear(4,128)
         self.relu = nn.ReLU()
         self.linear2 = nn.Linear(128,3)
     
