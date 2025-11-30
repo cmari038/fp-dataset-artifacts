@@ -57,7 +57,7 @@ class Ensemble(nn.Module):
         logits = elektra.logits
         if self.eval_model == False:
             #biased_logits = self.biasModel(features)
-            biased_logits = self.biasModel(input_ids)
+            biased_logits = self.biasModel(input_ids, attention_mask, token_type_ids)
             output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
         else:
             output = self.log_softmax(logits)
