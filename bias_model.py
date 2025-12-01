@@ -65,7 +65,8 @@ class Ensemble(nn.Module):
             #biased_logits = self.biasModel(features)
             biased_logits = self.biasModel(input_ids, attention_mask, token_type_ids, labels)
             biased_logits = biased_logits['logits']
-            output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
+            output = biased_logits + logits
+            #output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
         else:
             output = logits
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
