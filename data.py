@@ -151,11 +151,12 @@ def getFeatures(dataset):
 errors = []
 success = []
 stats = {'0':{'0':0, '1':0, '2':0}, '1':{'0':0, '1':0, '2':0}, '2':{'0':0, '1':0, '2':0}}
-with open("eval_predictions.jsonl", "r") as file:
+with open("eval_predictions-9.jsonl", "r") as file:
     for prediction in file:
         pred = json.loads(prediction)
         if pred["label"] != pred["predicted_label"]:
-            errors.append(pred)
+            if pred["predicted_label"] == 1:
+                errors.append(pred)
             if pred["label"] == 0:
                 stats['0'][str(pred['predicted_label'])] += 1
             elif pred["label"] == 1:
