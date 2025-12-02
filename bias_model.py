@@ -59,7 +59,7 @@ class Ensemble(nn.Module):
         #self.tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator')
     
     def forward(self, input_ids, attention_mask, token_type_ids, labels):
-        elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
+        elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids)
         logits = elektra.logits
         if self.eval_model == False:
             #biased_logits = self.biasModel(features)
