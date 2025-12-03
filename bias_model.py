@@ -31,7 +31,7 @@ class Hypo(nn.Module):
 class BiasModel(nn.Module):
     def __init__(self):
         super().__init__()
-        self.linear1 = nn.Linear(4,128)
+        self.linear1 = nn.Linear(6,128)
         self.relu = nn.ReLU()
         self.linear2 = nn.Linear(128,3)
     
@@ -71,9 +71,9 @@ def train_bias():
     model.zero_grad()
     model.train()
     snli = load_dataset("snli")
-    #anli = load_dataset("facebook/anli")
-    dataset = snli['train'].select(range(8192))
-    #dataset = anli['train_r1'].select(range(16000))
+    anli = load_dataset("facebook/anli")
+    #dataset = snli['train'].select(range(8192))
+    dataset = anli['train_r1'].select(range(4096))
     dataset = dataset.map(getFeatures)
     #dataset = dataset.map(prependLabel)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.003)
