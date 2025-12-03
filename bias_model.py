@@ -26,7 +26,7 @@ class Hypo(nn.Module):
         self.loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
     
     def forward(self, input_ids, attention_mask, token_type_ids, labels):
-        elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids)
+        elektra = self.unbiasedModel(input_ids, attention_mask)
         output = elektra.logits
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
         #return elektra.logits
@@ -63,9 +63,13 @@ class Ensemble(nn.Module):
         logits = elektra.logits
         if self.eval_model == False:
             #biased_logits = self.biasModel(features)
-            biased_logits = self.biasModel(input_ids, attention_mask, token_type_ids, labels)
+            hypo_tokens = token_type_ids == 1
+            input_ids_hypo = input_ids * hypo_tokens
+            hypo_attention_mask = attention_mask * hypo_tokens
+            biased_logits = self.biasModel(input_ids_hypo, hypo_attention_mask, token_type_ids, labels)
+            #biased_logits = self.biasModel(input_ids, attention_mask, token_type_ids, labels)
             biased_logits = biased_logits['logits']
-            output = biased_logits + logits
+            output = logits + biased_logits
             #output = (self.log_softmax(logits) + self.log_softmax(biased_logits))
         else:
             output = logits

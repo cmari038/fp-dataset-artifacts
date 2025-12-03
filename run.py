@@ -15,7 +15,7 @@ from helpers import (QuestionAnsweringTrainer, compute_accuracy,
                      prepare_validation_dataset_qa)
 
 NUM_PREPROCESSING_WORKERS = 2
-# python run.py --do_train True --do_eval True --per_device_train_batch_size 128 --per_device_eval_batch_size 128 --dataset facebook/anli --num_train_epochs 5 --task nli --max_train_samples 7168 --max_eval_samples 1000
+# python run.py --do_train True --do_eval True --max_length 100 --per_device_train_batch_size 32 --per_device_eval_batch_size 32 --dataset facebook/anli --num_train_epochs 5 --task nli --max_train_samples 512 --max_eval_samples 3200
 # python run.py --do_train True --do_eval True --per_device_train_batch_size 32 --per_device_eval_batch_size 32 --num_train_epochs 5 --task nli --max_train_samples 8192 --max_eval_samples 1536
 def main():
     argp = HfArgumentParser(TrainingArguments)
