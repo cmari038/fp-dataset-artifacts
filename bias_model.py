@@ -2,9 +2,6 @@ import random
 import string
 from collections import Counter
 
-import fasttext
-import fasttext.util
-import nltk
 import numpy as np
 import torch
 import torch.nn as nn
@@ -16,18 +13,7 @@ from transformers import (AutoModelForSequenceClassification, AutoTokenizer,
 from data import getFeatures, prependCorrectLabel
 from helpers import prepare_dataset_nli
 
-#fasttext.util.download_model('en')
-#nltk.download('punkt_tab')
 
-class Hypo(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.unbiasedModel = AutoModelForSequenceClassification.from_pretrained('google/electra-small-discriminator', use_safetensors=True, num_labels=3)
-    
-    def forward(self, input_ids, attention_mask, token_type_ids, labels, features):
-        elektra = self.unbiasedModel(input_ids, attention_mask, token_type_ids, labels)
-        return elektra.logits
-    
 class BiasModel(nn.Module):
     def __init__(self):
         super().__init__()
@@ -73,7 +59,7 @@ def train_bias():
     snli = load_dataset("snli")
     anli = load_dataset("facebook/anli")
     #dataset = snli['train'].select(range(8192))
-    dataset = anli['train_r1'].select(range(4096))
+    dataset = anli['train_r1']
     dataset = dataset.map(getFeatures)
     #dataset = dataset.map(prependLabel)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.003)

@@ -1,5 +1,6 @@
 import json
 import random
+import string
 from collections import Counter
 
 import fasttext
@@ -10,13 +11,10 @@ import torch
 import torch.nn as nn
 from datasets import load_dataset
 from nltk import RegexpTokenizer, sent_tokenize, word_tokenize
+from nltk.corpus import stopwords
 
-#fasttext.util.download_model('en')
 nltk.download('punkt_tab')
-#wordVectorModel = fasttext.load_model('cc.en.300.bin')
-#snli = load_dataset("snli")
-#dataset = snli['train'].select(range(15500))
-#for i in range(15500):
+nltk.download('stopwords')
 
 def adversarial(dataset):
     #print(dataset['premise'])
@@ -80,39 +78,25 @@ def getFeatures(dataset):
         hypothesis = dataset['hypothesis']
         features = []
         unique_tokens = 0
+        stop_words = set(stopwords.words("english"))
+        regex_tokenizer = RegexpTokenizer(r'\w+')
+        premise_tokens = regex_tokenizer.tokenize(premise.lower())
+        hypothesis_tokens = regex_tokenizer.tokenize(hypothesis.lower())
         #unique_hypo_word_vector = np.zeros(300)
         #similar_hypo_word_vector = np.zeros(300)
-        premise_tokens = word_tokenize(premise.lower())
-        hypothesis_tokens = word_tokenize(hypothesis.lower())
+        #premise_tokens = word_tokenize(premise.lower())
+        #hypothesis_tokens = word_tokenize(hypothesis.lower())
         premise_words = Counter(premise_tokens)
         hypothesis_words = Counter(hypothesis_tokens)
         
         count = 0
         for word in hypothesis_words.keys():
+            #if word in stop_words:
+                #continue
             if word in premise_words.keys():
                 count += 1
-                #similar_hypo_word_vector += wordVectorModel.get_word_vector(word)
             else:
                 unique_tokens += 1
-                #unique_hypo_word_vector += wordVectorModel.get_word_vector(word)
-        
-            """
-            device = 'cuda' if torch.cuda.is_available() else ('mps' if torch.backends.mps.is_available() else 'cpu')
-            for word in hypothesis_words.keys():
-            distances = []
-            hypo_word_vector = self.wordVectorModel.get_word_vector(word)
-            for p in premise_words.keys():
-                if word == p:
-                    count += 1
-                premise_wordVector = self.wordVectorModel.get_word_vector(p)
-                dist = 1 - nn.functional.cosine_similarity(torch.tensor(hypo_word_vector, device=device), torch.tensor(premise_wordVector, device=device), dim=0)
-                #print(dist)
-                distances.append(dist.item())
-            min_distances.append(min(distances))
-            """
-        
-        #print(similar_hypo_word_vector)
-        #print(unique_hypo_word_vector)
             
         if len(hypothesis) > 0:
             if isSubsequence(premise_tokens, hypothesis_tokens):
@@ -131,13 +115,10 @@ def getFeatures(dataset):
             features.append(count / len(hypothesis_words))
             features.append(count/(unique_tokens + len(premise_words)))
             features.append(len(premise_tokens) - len(hypothesis_tokens)/len(premise_tokens) + len(hypothesis_tokens))
-            #features.extend(unique_hypo_word_vector.tolist())
-            #features.extend(similar_hypo_word_vector.tolist())
-            #features.append(sum(min_distances)/len(min_distances))
-            #features.append(max(min_distances))
+          
 
         else:
-            features.extend([0,0,0,0,0])
+            features.extend([0,0,0])
 
         if "not" in hypothesis_words.keys() or "no" in hypothesis_words.keys() or "n't" in hypothesis_words.keys():
           features.append(1)
@@ -147,7 +128,7 @@ def getFeatures(dataset):
         #print(features)
         dataset['features'] = features
         return (dataset)
-
+    
 errors = []
 success = []
 stats = {'0':{'0':0, '1':0, '2':0}, '1':{'0':0, '1':0, '2':0}, '2':{'0':0, '1':0, '2':0}}
@@ -169,5 +150,6 @@ with open("eval_predictions.jsonl", "r") as file:
 for error in errors:
     print(error)
 print(stats)
+
 
 
