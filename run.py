@@ -50,9 +50,9 @@ def main():
     argp.add_argument('--max_length', type=int, default=32,
                       help="""This argument limits the maximum sequence length used during training/evaluation.
         Shorter sequence lengths need less memory and computation time, but some examples may end up getting truncated.""")
-    argp.add_argument('--max_train_samples', type=int, default=16000,
+    argp.add_argument('--max_train_samples', type=int, default=None,
                       help='Limit the number of examples to train on.')
-    argp.add_argument('--max_eval_samples', type=int, default=7168,
+    argp.add_argument('--max_eval_samples', type=int, default=None,
                       help='Limit the number of examples to evaluate on.')
 
     training_args, args = argp.parse_args_into_dataclasses()
@@ -113,13 +113,16 @@ def main():
         # remove SNLI examples with no label
         dataset = dataset.filter(lambda ex: ex['label'] != -1)
     
+    out_of_domain = datasets.load_dataset("facebook/anli")
     train_dataset = None
     eval_dataset = None
     train_dataset_featurized = None
     eval_dataset_featurized = None
     if training_args.do_train:
-        #train_dataset = dataset['train_r1']
-        train_dataset = dataset['train']
+        #train_dataset = out_of_domain["train_r1"]
+        train_dataset = out_of_domain["train_r2"]
+        #train_dataset = out_of_domain["train_r3"]
+        #train_dataset = dataset['train']
         if args.max_train_samples:
             train_dataset = train_dataset.select(range(args.max_train_samples))
         #train_dataset = train_dataset.map(getFeatures)
