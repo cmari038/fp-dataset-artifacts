@@ -7,9 +7,9 @@ from transformers import (AutoModelForQuestionAnswering,
                           AutoModelForSequenceClassification, AutoTokenizer,
                           HfArgumentParser, Trainer, TrainingArguments)
 
-from bias_model import BiasModel, Ensemble
-from data import (adversarial, getFeatures, prependCorrectLabel,
-                  prependRandomLabel)
+from bias_model import BiasModel, Ensemble, Hypo, HypoEnsemble
+from data import (adversarial, error_analysis, getFeatures,
+                  prependCorrectLabel, prependRandomLabel)
 from helpers import (QuestionAnsweringTrainer, compute_accuracy,
                      prepare_dataset_nli, prepare_train_dataset_qa,
                      prepare_validation_dataset_qa)
@@ -121,12 +121,20 @@ def main():
     eval_dataset_featurized = None
     if training_args.do_train:
         #train_dataset = out_of_domain["train_r1"]
-        train_dataset = out_of_domain["train_r2"]
+        #train_dataset = out_of_domain["train_r2"]
         #train_dataset = out_of_domain["train_r3"]
-        #train_dataset = dataset['train']
+        train_dataset = dataset['train']
         if args.max_train_samples:
             train_dataset = train_dataset.select(range(args.max_train_samples))
         train_dataset = train_dataset.map(getFeatures)
+        """train_dataset = train_dataset.map(prependCorrectLabel)
+        train_dataset_bias = train_dataset.map(adversarial)
+        train_dataset_bias_featurized = train_dataset_bias.map(
+            prepare_train_dataset,
+            batched=True,
+            num_proc=NUM_PREPROCESSING_WORKERS,
+            remove_columns=train_dataset.column_names
+        )"""
         train_dataset_featurized = train_dataset.map(
             prepare_train_dataset,
             batched=True,
@@ -135,13 +143,14 @@ def main():
         )
     if training_args.do_eval:
         #eval_dataset = dataset[eval_split]
-        #eval_dataset = out_of_domain["dev_r1"]
-        eval_dataset = out_of_domain["dev_r2"]
-        #eval_dataset = out_of_domain["dev_r3"]
+        eval_dataset = out_of_domain["test_r1"]
+        eval_dataset = out_of_domain["test_r2"]
+        eval_dataset = out_of_domain["test_r3"]
         #eval_dataset = datasets.concatenate_datasets([out_of_domain["test_r1"], out_of_domain["test_r2"], out_of_domain["test_r3"]])
         if args.max_eval_samples:
             eval_dataset = eval_dataset.select(range(args.max_eval_samples))
         eval_dataset = eval_dataset.map(getFeatures)
+        #eval_dataset = eval_dataset.map(prependRandomLabel)
         eval_dataset_featurized = eval_dataset.map(
             prepare_eval_dataset,
             batched=True,
@@ -176,6 +185,17 @@ def main():
         nonlocal eval_predictions
         eval_predictions = eval_preds
         return compute_metrics(eval_preds)
+    
+    """hypo = Hypo()
+    bias_trainer = trainer_class(
+        model=hypo,
+        args=training_args,
+        train_dataset=train_dataset_bias_featurized,
+        tokenizer=tokenizer,
+        compute_metrics=compute_metrics_and_store_predictions
+    )
+    bias_trainer.train()
+    biasModel = HypoEnsemble(bias_trainer.model)"""
     
     biasModel = Ensemble()
 
@@ -240,3 +260,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    error_analysis('eval_predictions.jsonl')

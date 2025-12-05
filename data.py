@@ -17,18 +17,7 @@ nltk.download('punkt_tab')
 nltk.download('stopwords')
 
 def adversarial(dataset):
-    #print(dataset['premise'])
-    premise_words = word_tokenize(dataset['premise'])
-    hypothesis_words = word_tokenize(dataset['hypothesis'])
-    holder = ''
-    #print(premise_words)
-    for word in hypothesis_words:
-        if word in premise_words:
-            holder += word
-            holder += ' '
-    #dataset['hypothesis'] = holder
     dataset['premise'] = ''
-    #print(holder)
     return dataset
 
 def prependCorrectLabel(dataset):
@@ -128,28 +117,29 @@ def getFeatures(dataset):
         #print(features)
         dataset['features'] = features
         return (dataset)
-    
-errors = []
-success = []
-stats = {'0':{'0':0, '1':0, '2':0}, '1':{'0':0, '1':0, '2':0}, '2':{'0':0, '1':0, '2':0}}
-with open("eval_predictions.jsonl", "r") as file:
-    for prediction in file:
-        pred = json.loads(prediction)
-        if pred["label"] != pred["predicted_label"]:
-            errors.append(pred)
-            if pred["label"] == 0:
-                stats['0'][str(pred['predicted_label'])] += 1
-            elif pred["label"] == 1:
-                stats['1'][str(pred['predicted_label'])] += 1
+
+def error_analysis(output_file):
+    errors = []
+    success = []
+    stats = {'0':{'0':0, '1':0, '2':0}, '1':{'0':0, '1':0, '2':0}, '2':{'0':0, '1':0, '2':0}}
+    with open(output_file, "r") as file:
+        for prediction in file:
+            pred = json.loads(prediction)
+            if pred["label"] != pred["predicted_label"]:
+                errors.append(pred)
+                if pred["label"] == 0:
+                    stats['0'][str(pred['predicted_label'])] += 1
+                elif pred["label"] == 1:
+                    stats['1'][str(pred['predicted_label'])] += 1
+                else:
+                    stats['2'][str(pred['predicted_label'])] += 1
+                    
+                    
             else:
-                stats['2'][str(pred['predicted_label'])] += 1
-                
-                
-        else:
-            success.append(prediction)
-for error in errors:
-    print(error)
-print(stats)
+                success.append(prediction)
+    for error in errors:
+        print(error)
+    print(stats)
 
 
 
