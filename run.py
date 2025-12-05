@@ -140,7 +140,10 @@ def main():
     if training_args.do_eval:
         #eval_dataset = dataset[eval_split]
         out_of_domain = datasets.load_dataset("facebook/anli")
-        eval_dataset = datasets.concatenate_datasets([out_of_domain["test_r1"], out_of_domain["test_r2"], out_of_domain["test_r3"]])
+        eval_dataset = out_of_domain["test_r1"]
+        #eval_dataset = out_of_domain["test_r2"]
+        #eval_dataset = out_of_domain["test_r3"]
+        #eval_dataset = datasets.concatenate_datasets([out_of_domain["test_r1"], out_of_domain["test_r2"], out_of_domain["test_r3"]])
         if args.max_eval_samples:
             eval_dataset = eval_dataset.select(range(args.max_eval_samples))
         #eval_dataset = eval_dataset.map(getFeatures)
