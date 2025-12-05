@@ -7,7 +7,7 @@ from transformers import (AutoModelForQuestionAnswering,
                           AutoModelForSequenceClassification, AutoTokenizer,
                           HfArgumentParser, Trainer, TrainingArguments)
 
-from bias_model import BiasModel, Ensemble, Hypo
+from bias_model import Hypo, HypoEnsemble
 from data import (adversarial, getFeatures, prependCorrectLabel,
                   prependRandomLabel)
 from helpers import (QuestionAnsweringTrainer, compute_accuracy,
@@ -47,7 +47,7 @@ def main():
         By default, "nli" will use the SNLI dataset, and "qa" will use the SQuAD dataset.""")
     argp.add_argument('--dataset', type=str, default=None,
                       help="""This argument overrides the default dataset used for the specified task.""")
-    argp.add_argument('--max_length', type=int, default=32,
+    argp.add_argument('--max_length', type=int, default=100,
                       help="""This argument limits the maximum sequence length used during training/evaluation.
         Shorter sequence lengths need less memory and computation time, but some examples may end up getting truncated.""")
     argp.add_argument('--max_train_samples', type=int, default=None,
@@ -196,7 +196,7 @@ def main():
         compute_metrics=compute_metrics_and_store_predictions
     )
     bias_trainer.train()
-    biasModel = Ensemble(bias_trainer.model)
+    biasModel = HypoEnsemble(bias_trainer.model)
     # Initialize the Trainer object with the specified arguments and the model and dataset we loaded above
     trainer = trainer_class(
         model=biasModel,

@@ -26,29 +26,14 @@ class Hypo(nn.Module):
         return {'logits': output, "loss": self.loss_fcn(output, labels)}
         #return elektra.logits
     
-class BiasModel(nn.Module):
-    def __init__(self):
-        super().__init__()
-        self.linear1 = nn.Linear(6,128)
-        self.relu = nn.ReLU()
-        self.linear2 = nn.Linear(128,3)
-    
-    def forward(self, input):
-        print(input)
-        # return self.linear(torch.tensor(input[0], device=self.linear.weight.device))
-        return self.linear2(self.relu(self.linear1(input)))  
-    
-class Ensemble(nn.Module):
+class HypoEnsemble(nn.Module):
     def __init__(self, model=None):
         super().__init__()
         self.unbiasedModel = AutoModelForSequenceClassification.from_pretrained('google/electra-small-discriminator', use_safetensors=True, num_labels=3)
         self.eval_model = False
-        self.log_softmax = nn.LogSoftmax(dim=1)
+        self.log_softmax = nn.LogSoftmax(dim=-1)
         self.loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
-        if model != None:
-            self.biasModel = model
-        else:
-            self.biasModel = train_bias()
+        self.biasModel = model
         for parameter in self.biasModel.parameters():
           parameter.requires_grad = False
         #self.tokenizer = AutoTokenizer.from_pretrained('google/electra-small-discriminator')
