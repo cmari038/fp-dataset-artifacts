@@ -102,7 +102,7 @@ def train_bias():
     #dataset = anli['train_r1']
     dataset = dataset.map(getFeatures)
     #dataset = dataset.map(prependLabel)
-    optimizer = torch.optim.Adam(model.parameters())
+    optimizer = torch.optim.AdamW(model.parameters())
     loss_fcn = nn.CrossEntropyLoss(ignore_index=-1)
     for i in range(5):
         #model.zero_grad()

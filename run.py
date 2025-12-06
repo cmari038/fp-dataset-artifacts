@@ -127,14 +127,14 @@ def main():
         if args.max_train_samples:
             train_dataset = train_dataset.select(range(args.max_train_samples))
         train_dataset = train_dataset.map(getFeatures)
-        """train_dataset = train_dataset.map(prependCorrectLabel)
+        #train_dataset = train_dataset.map(prependCorrectLabel)
         train_dataset_bias = train_dataset.map(adversarial)
         train_dataset_bias_featurized = train_dataset_bias.map(
             prepare_train_dataset,
             batched=True,
             num_proc=NUM_PREPROCESSING_WORKERS,
             remove_columns=train_dataset.column_names
-        )"""
+        )
         train_dataset_featurized = train_dataset.map(
             prepare_train_dataset,
             batched=True,
@@ -144,8 +144,8 @@ def main():
     if training_args.do_eval:
         #eval_dataset = dataset[eval_split]
         eval_dataset = out_of_domain["test_r1"]
-        eval_dataset = out_of_domain["test_r2"]
-        eval_dataset = out_of_domain["test_r3"]
+        #eval_dataset = out_of_domain["test_r2"]
+        #eval_dataset = out_of_domain["test_r3"]
         #eval_dataset = datasets.concatenate_datasets([out_of_domain["test_r1"], out_of_domain["test_r2"], out_of_domain["test_r3"]])
         if args.max_eval_samples:
             eval_dataset = eval_dataset.select(range(args.max_eval_samples))
@@ -186,7 +186,7 @@ def main():
         eval_predictions = eval_preds
         return compute_metrics(eval_preds)
     
-    """hypo = Hypo()
+    hypo = Hypo()
     bias_trainer = trainer_class(
         model=hypo,
         args=training_args,
@@ -194,8 +194,8 @@ def main():
         tokenizer=tokenizer,
         compute_metrics=compute_metrics_and_store_predictions
     )
-    bias_trainer.train()
-    biasModel = HypoEnsemble(bias_trainer.model)"""
+    #bias_trainer.train()
+    #biasModel = HypoEnsemble(bias_trainer.model)
     
     biasModel = Ensemble()
 
@@ -260,4 +260,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    error_analysis('eval_predictions.jsonl')
+    error_analysis('trainer_output/eval_predictions.jsonl')
